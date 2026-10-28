@@ -192,6 +192,7 @@ model Vehicle {
   year Int
   plate String @unique
   ownerConsentAt DateTime?
+  ownerPermissionVerifiedAt DateTime?
   reviewManagerId String? @db.Uuid
   reviewer User? @relation("VehicleReviewer", fields:[reviewManagerId],references:[id])
   status VehicleStatus @default(PENDING)
