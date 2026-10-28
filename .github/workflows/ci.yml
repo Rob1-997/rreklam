@@ -40,3 +40,5 @@ jobs:
         run: npx prisma db execute --file prisma/sql/booking_constraints.sql --schema prisma/schema.prisma
       - name: Verify PostgreSQL vehicle booking invariants
         run: npx tsx tests/db-booking.ts
+      - name: Verify financial quote snapshots and constraints
+        run: npx tsx tests/db-quotes.ts
