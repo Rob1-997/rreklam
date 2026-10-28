@@ -70,6 +70,21 @@ enum ProposalStatus {
   APPROVED
   REJECTED
 }
+enum QuoteStatus {
+  PENDING_OWNER
+  APPROVED
+  REJECTED
+}
+enum CostCategory {
+  PRINT
+  INSTALL
+  REMOVAL
+  LOGISTICS
+  OPERATIONS
+  PAYMENT_FEE
+  RESERVE
+  OTHER
+}
 enum PaymentStatus {
   PENDING
   SUCCEEDED
@@ -124,6 +139,8 @@ model User {
   ownedVehicles Vehicle[] @relation("VehicleOwner")
   managedCampaigns Campaign[] @relation("CampaignManager")
   approvals QuoteApproval[] @relation("QuoteApprover")
+  createdQuotes CampaignQuote[] @relation("QuoteAuthor")
+  reviewedQuotes CampaignQuote[] @relation("QuoteReviewer")
   auditEntries AuditLog[] @relation("AuditActor")
 }
 
@@ -245,6 +262,7 @@ model AdPackage {
   format AdFormat
   durationDays Int
   active Boolean @default(false)
+  quoteLines QuoteLine[]
   prices PackageCityPrice[]
   driverRates DriverRate[]
   @@unique([format,durationDays])
@@ -277,7 +295,7 @@ model Campaign {
   clientId String @db.Uuid
   managerId String? @db.Uuid
   status CampaignStatus @default(DRAFT)
-  quoteVersion Int @default(1)
+  quoteVersion Int @default(0)
   quotePriceAmd Int?
   directCostAmd Int?
   marginBps Int?
@@ -289,6 +307,7 @@ model Campaign {
   targets CampaignCityTarget[]
   allocations VehicleAllocation[]
   costs CampaignCost[]
+  quotes CampaignQuote[]
   approvals QuoteApproval[]
   payments Payment[]
   @@index([clientId,status])
@@ -301,6 +320,7 @@ model CampaignCityTarget {
   packageId String @db.Uuid
   quantity Int
   priceAmd Int
+  quoteLines QuoteLine[]
   campaign Campaign @relation(fields:[campaignId],references:[id],onDelete:Cascade)
   location Location @relation(fields:[locationId],references:[id])
   allocations VehicleAllocation[]
@@ -398,6 +418,7 @@ model TariffProposal {
   locationId String @db.Uuid
   suggestedPriceAmd Int
   reason String
+  createdAt DateTime @default(now())
   status ProposalStatus @default(DRAFT)
   decidedById String? @db.Uuid
   decidedAt DateTime?
@@ -468,4 +489,57 @@ model ClientProfile {
   user User @relation(fields:[userId],references:[id])
   manager User? @relation("ClientManager",fields:[managerId],references:[id])
   @@index([managerId])
+}
+
+model CampaignQuote {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  version Int
+  status QuoteStatus
+  preparedById String @db.Uuid
+  reviewedById String? @db.Uuid
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  decisionReason String?
+  grossPriceAmd Int
+  discountAmd Int @default(0)
+  priceAmd Int
+  driverPayoutAmd Int
+  manualCostAmd Int
+  directCostAmd Int
+  marginBps Int
+  exceptionRequired Boolean
+  campaign Campaign @relation(fields:[campaignId],references:[id])
+  preparedBy User @relation("QuoteAuthor",fields:[preparedById],references:[id])
+  reviewedBy User? @relation("QuoteReviewer",fields:[reviewedById],references:[id])
+  lines QuoteLine[]
+  costs QuoteCost[]
+  @@unique([campaignId,version])
+  @@index([status,createdAt])
+}
+
+model QuoteLine {
+  id String @id @default(uuid()) @db.Uuid
+  quoteId String @db.Uuid
+  targetId String @db.Uuid
+  packageId String @db.Uuid
+  quantity Int
+  unitPriceAmd Int
+  unitDriverRateAmd Int
+  totalPriceAmd Int
+  totalDriverPayoutAmd Int
+  quote CampaignQuote @relation(fields:[quoteId],references:[id],onDelete:Cascade)
+  target CampaignCityTarget @relation(fields:[targetId],references:[id])
+  package AdPackage @relation(fields:[packageId],references:[id])
+  @@unique([quoteId,targetId])
+}
+
+model QuoteCost {
+  id String @id @default(uuid()) @db.Uuid
+  quoteId String @db.Uuid
+  category CostCategory
+  amountAmd Int
+  note String?
+  quote CampaignQuote @relation(fields:[quoteId],references:[id],onDelete:Cascade)
+  @@unique([quoteId,category])
 }
