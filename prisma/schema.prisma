@@ -19,6 +19,7 @@ enum PaymentStatus { PENDING SUCCEEDED FAILED REFUNDED }
 enum EarningsStatus { PROJECTED ACCRUED APPROVED PAID }
 enum MediaKind { FRONT BACK LEFT RIGHT CHECK PROOF OTHER }
 enum AdFormat { REAR_WINDOW DOORS PARTIAL FULL }
+enum LocationKind { REGION CITY }
 
 model User {
   id String @id @default(uuid()) @db.Uuid
@@ -78,6 +79,7 @@ model Fleet {
 model Location {
   id String @id @default(uuid()) @db.Uuid
   code String @unique
+  kind LocationKind @default(CITY)
   nameHy String
   nameRu String
   nameEn String
