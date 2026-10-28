@@ -46,7 +46,7 @@ export default function CampaignQuoteBuilder({campaignId,targets,onChanged}:{cam
  const allPriced=rows.length>0&&rows.every(r=>r.unitPriceAmd!==undefined&&r.unitDriverRateAmd!==undefined);
  const gross=rows.reduce((sum,x)=>sum+(x.unitPriceAmd??0)*x.quantity,0);
  const payouts=rows.reduce((sum,x)=>sum+(x.unitDriverRateAmd??0)*x.quantity,0);
- const manual=costInputs.reduce((sum,x)=>sum+(costValues[x.category]||0),0);
+ const manual=costInputs.reduce((sum,x)=>sum+Number(costValues[x.category]||0),0);
  const net=gross-discount,paymentCosts=manual+payouts;
  const margin=net>0?(net-paymentCosts)*100/net:null;
  const needsOwner=discount>0||(margin!==null&&margin<25);
