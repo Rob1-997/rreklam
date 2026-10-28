@@ -1,9 +1,29 @@
 "use client";
-import {useEffect,useState} from "react";
-type Request={id:string;createdAt:string;status:string;client:{name:string|null;phone:string|null;email:string|null};targets:{quantity:number;location:{code:string;nameRu:string}}[]};
+import {useCallback,useEffect,useState} from "react";
+import CampaignQuoteBuilder from "@/components/CampaignQuoteBuilder";
+type Request={id:string;createdAt:string;status:string;client:{name:string|null;phone:string|null;email:string|null};targets:{id:string;packageId:string;quantity:number;location:{code:string;nameRu:string}}[]};
 export default function ClientRequests(){
-  const [requests,setRequests]=useState<Request[]>([]);
-  const [error,setError]=useState("");
-  useEffect(()=>{let live=true;fetch("/api/admin/campaigns",{cache:"no-store"}).then(async r=>{const x=await r.json();if(!r.ok)throw Error(x.error??"Could not load requests");if(live)setRequests(x.campaigns)}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Failed")});return()=>{live=false}},[]);
-  return <div><h2>New customer campaigns · {requests.length}</h2><p className="small">These are unpriced requests. No reservations or payments have been made. Each request needs a manager’s quote and owner-controlled financial approval workflow.</p>{error&&<p role="alert">{error}</p>}{requests.length===0?<p className="muted">No campaign requests assigned.</p>:<div className="cards">{requests.map(r=><div className="card" key={r.id}><h3>{r.client.name||"Customer"}</h3><p className="small">{r.client.phone||r.client.email||"Verified account"}</p><p>{r.targets.map(x=>x.location.nameRu+": "+x.quantity).join(" · ")}</p><p className="small">Request #{r.id.slice(0,8)} · {new Date(r.createdAt).toLocaleDateString()}</p><span className="pill">{r.status}</span></div>)}</div>}</div>;
+ const [requests,setRequests]=useState<Request[]>([]);
+ const [open,setOpen]=useState<string|null>(null);
+ const [error,setError]=useState("");
+ const [loading,setLoading]=useState(true);
+ const refresh=useCallback(async()=>{try{
+   const res=await fetch("/api/admin/campaigns",{cache:"no-store"});const json=await res.json();
+   if(!res.ok)throw Error(json.error??"Не удалось получить заявки");
+   setRequests(json.campaigns);
+  }catch(e){setError(e instanceof Error?e.message:"Ошибка заявок");}finally{setLoading(false)}},[]);
+ useEffect(()=>{void refresh()},[refresh]);
+ return <div><h2>Новые заявки рекламодателей · {requests.length}</h2>
+  <p className="small">Утверждённые тарифы → расходы вручную → проверка 25% → согласование скидки или исключения владельцем. Заявка не резервирует машины и не списывает деньги.</p>
+  {loading&&<p>Загрузка заявок…</p>}
+  {error&&<p role="alert" style={{color:"#bd2439"}}>{error}</p>}
+  {requests.length===0&&!loading?<p className="muted">Нет новых заявок для обработки.</p>:<div style={{display:"grid",gap:18}}>{requests.map(r=><div className="card" key={r.id}>
+   <h3>{r.client.name||"Клиент"} · #{r.id.slice(0,8)}</h3>
+   <p className="small">{r.client.phone||r.client.email||"Подтверждённый аккаунт"}</p>
+   <p>{r.targets.map(x=>x.location.nameRu+": "+x.quantity).join(" · ")}</p>
+   <p className="small">Создана {new Date(r.createdAt).toLocaleDateString("ru-RU")} · {r.status}</p>
+   <button type="button" className="cta ghost" onClick={()=>setOpen(open===r.id?null:r.id)}>{open===r.id?"Скрыть смету":"Подготовить смету"}</button>
+   {open===r.id&&<CampaignQuoteBuilder campaignId={r.id} targets={r.targets} onChanged={()=>void refresh()}/>}
+  </div>)}</div>}
+ </div>
 }

@@ -11,7 +11,7 @@ export async function GET(){
       select:{
         id:true,createdAt:true,status:true,
         client:{select:{id:true,name:true,phone:true,email:true}},
-        targets:{select:{quantity:true,packageId:true,location:{select:{code:true,nameRu:true}}}}
+        targets:{select:{id:true,quantity:true,packageId:true,location:{select:{code:true,nameRu:true}}}}
       }
     });
     return NextResponse.json({campaigns},{headers:{"Cache-Control":"private, no-store"}});
