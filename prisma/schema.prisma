@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus { PENDING ACTIVE SUSPENDED }
+enum RoleCode { OWNER TEAM_LEAD MANAGER QUALITY FINANCE HR CLIENT PERFORMER }
+enum VehicleStatus { PENDING APPROVED SUSPENDED REJECTED }
+enum WrapStatus { NONE INSTALLING INSTALLED DAMAGED REMOVING }
+enum AllocationStatus { HELD CONFIRMED INSTALLING ACTIVE REMOVING COMPLETED CANCELLED }
+enum CampaignStatus { DRAFT REVIEW APPROVED AWAITING_PAYMENT PAID SCHEDULED ACTIVE FINISHED CANCELLED DISPUTED }
+enum CheckStatus { SCHEDULED SENT SUBMITTED ACCEPTED REJECTED MISSED }
+enum ProposalStatus { DRAFT SUBMITTED APPROVED REJECTED }
+enum PaymentStatus { PENDING SUCCEEDED FAILED REFUNDED }
+enum EarningsStatus { PROJECTED ACCRUED APPROVED PAID }
+enum MediaKind { FRONT BACK LEFT RIGHT CHECK PROOF OTHER }
+enum AdFormat { REAR_WINDOW DOORS PARTIAL FULL }
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  phone String? @unique
+  email String? @unique
+  name String
+  status UserStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  roles UserRole[]
+  driver DriverProfile?
+  ownedVehicles Vehicle[] @relation("VehicleOwner")
+  managedCampaigns Campaign[] @relation("CampaignManager")
+  approvals QuoteApproval[] @relation("QuoteApprover")
+  auditEntries AuditLog[] @relation("AuditActor")
+}
+
+model UserRole {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  role RoleCode
+  activatedAt DateTime?
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([userId,role])
+}
+
+model DriverProfile {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  driverType String
+  approvedAt DateTime?
+  user User @relation(fields:[userId],references:[id])
+  assignments VehicleDriver[]
+  earnings DriverEarning[]
+}
+
+model Fleet {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  contactPhone String?
+  managerId String? @db.Uuid
+  vehicles Vehicle[]
+  createdAt DateTime @default(now())
+}
+
+model Location {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  nameHy String
+  nameRu String
+  nameEn String
+  parentId String? @db.Uuid
+  parent Location? @relation("LocationTree",fields:[parentId],references:[id])
+  children Location[] @relation("LocationTree")
+  vehicleAreas VehicleServiceArea[]
+  targets CampaignCityTarget[]
+  thresholds StockAlertRule[]
+  prices PackageCityPrice[]
+  driverRates DriverRate[]
+}
+
+model BodyType {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  nameRu String
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id String @id @default(uuid()) @db.Uuid
+  ownerId String @db.Uuid
+  fleetId String? @db.Uuid
+  bodyTypeId String @db.Uuid
+  brand String
+  model String
+  year Int
+  plate String @unique
+  ownerConsentAt DateTime?
+  status VehicleStatus @default(PENDING)
+  wrapStatus WrapStatus @default(NONE)
+  approvedAt DateTime?
+  createdAt DateTime @default(now())
+  owner User @relation("VehicleOwner",fields:[ownerId],references:[id])
+  fleet Fleet? @relation(fields:[fleetId],references:[id])
+  bodyType BodyType @relation(fields:[bodyTypeId],references:[id])
+  photos VehicleMedia[]
+  serviceAreas VehicleServiceArea[]
+  drivers VehicleDriver[]
+  allocations VehicleAllocation[]
+}
+
+model VehicleMedia {
+  id String @id @default(uuid()) @db.Uuid
+  vehicleId String @db.Uuid
+  kind MediaKind
+  privateStorageKey String
+  uploadedAt DateTime @default(now())
+  vehicle Vehicle @relation(fields:[vehicleId],references:[id],onDelete:Cascade)
+  @@index([vehicleId,kind])
+}
+
+model VehicleServiceArea {
+  vehicleId String @db.Uuid
+  locationId String @db.Uuid
+  vehicle Vehicle @relation(fields:[vehicleId],references:[id],onDelete:Cascade)
+  location Location @relation(fields:[locationId],references:[id])
+  @@id([vehicleId,locationId])
+}
+
+model VehicleDriver {
+  vehicleId String @db.Uuid
+  driverId String @db.Uuid
+  startsAt DateTime @default(now())
+  endsAt DateTime?
+  vehicle Vehicle @relation(fields:[vehicleId],references:[id])
+  driver DriverProfile @relation(fields:[driverId],references:[id])
+  @@id([vehicleId,driverId,startsAt])
+}
+
+model AdPackage {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  format AdFormat
+  durationDays Int
+  active Boolean @default(false)
+  prices PackageCityPrice[]
+  driverRates DriverRate[]
+  @@unique([format,durationDays])
+}
+
+model PackageCityPrice {
+  id String @id @default(uuid()) @db.Uuid
+  packageId String @db.Uuid
+  locationId String @db.Uuid
+  priceAmd Int
+  ownerApprovedAt DateTime?
+  package AdPackage @relation(fields:[packageId],references:[id])
+  location Location @relation(fields:[locationId],references:[id])
+  @@unique([packageId,locationId])
+}
+
+model DriverRate {
+  id String @id @default(uuid()) @db.Uuid
+  packageId String @db.Uuid
+  locationId String @db.Uuid
+  amountAmd Int
+  ownerApprovedAt DateTime?
+  package AdPackage @relation(fields:[packageId],references:[id])
+  location Location @relation(fields:[locationId],references:[id])
+  @@unique([packageId,locationId])
+}
+
+model Campaign {
+  id String @id @default(uuid()) @db.Uuid
+  clientId String @db.Uuid
+  managerId String? @db.Uuid
+  status CampaignStatus @default(DRAFT)
+  quoteVersion Int @default(1)
+  quotePriceAmd Int?
+  directCostAmd Int?
+  marginBps Int?
+  startAt DateTime?
+  endAt DateTime?
+  createdAt DateTime @default(now())
+  manager User? @relation("CampaignManager",fields:[managerId],references:[id])
+  targets CampaignCityTarget[]
+  allocations VehicleAllocation[]
+  costs CampaignCost[]
+  approvals QuoteApproval[]
+  payments Payment[]
+  @@index([clientId,status])
+}
+
+model CampaignCityTarget {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  locationId String @db.Uuid
+  packageId String @db.Uuid
+  quantity Int
+  priceAmd Int
+  campaign Campaign @relation(fields:[campaignId],references:[id],onDelete:Cascade)
+  location Location @relation(fields:[locationId],references:[id])
+  allocations VehicleAllocation[]
+  @@unique([campaignId,locationId,packageId])
+}
+
+model VehicleAllocation {
+  id String @id @default(uuid()) @db.Uuid
+  vehicleId String @db.Uuid
+  campaignId String @db.Uuid
+  targetId String @db.Uuid
+  startsAt DateTime
+  endsAt DateTime
+  status AllocationStatus @default(HELD)
+  vehicle Vehicle @relation(fields:[vehicleId],references:[id])
+  campaign Campaign @relation(fields:[campaignId],references:[id])
+  target CampaignCityTarget @relation(fields:[targetId],references:[id])
+  checks VehicleCheck[]
+  earnings DriverEarning[]
+  @@index([vehicleId,startsAt,endsAt])
+}
+
+model CampaignCost {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  label String
+  amountAmd Int
+  enteredByUserId String @db.Uuid
+  recordedAt DateTime @default(now())
+  campaign Campaign @relation(fields:[campaignId],references:[id])
+}
+
+model QuoteApproval {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  quoteVersion Int
+  approverId String @db.Uuid
+  reason String
+  approvedAt DateTime @default(now())
+  campaign Campaign @relation(fields:[campaignId],references:[id])
+  approver User @relation("QuoteApprover",fields:[approverId],references:[id])
+  @@unique([campaignId,quoteVersion])
+}
+
+model VehicleCheck {
+  id String @id @default(uuid()) @db.Uuid
+  allocationId String @db.Uuid
+  challengeHash String
+  scheduledAt DateTime
+  sentAt DateTime?
+  expiresAt DateTime
+  submittedAt DateTime?
+  status CheckStatus @default(SCHEDULED)
+  photoStorageKey String?
+  reviewedById String? @db.Uuid
+  allocation VehicleAllocation @relation(fields:[allocationId],references:[id])
+  @@index([allocationId,scheduledAt])
+}
+
+model DriverEarning {
+  id String @id @default(uuid()) @db.Uuid
+  driverId String @db.Uuid
+  allocationId String @db.Uuid
+  amountAmd Int
+  status EarningsStatus @default(PROJECTED)
+  approvedAt DateTime?
+  paidAt DateTime?
+  driver DriverProfile @relation(fields:[driverId],references:[id])
+  allocation VehicleAllocation @relation(fields:[allocationId],references:[id])
+}
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  providerReference String? @unique
+  amountAmd Int
+  status PaymentStatus @default(PENDING)
+  processedAt DateTime?
+  campaign Campaign @relation(fields:[campaignId],references:[id])
+}
+
+model StockAlertRule {
+  id String @id @default(uuid()) @db.Uuid
+  locationId String @db.Uuid
+  minimumAvailable Int
+  enabled Boolean @default(true)
+  location Location @relation(fields:[locationId],references:[id])
+  @@unique([locationId])
+}
+
+model TariffProposal {
+  id String @id @default(uuid()) @db.Uuid
+  proposedById String @db.Uuid
+  packageId String @db.Uuid
+  locationId String @db.Uuid
+  suggestedPriceAmd Int
+  reason String
+  status ProposalStatus @default(DRAFT)
+  decidedById String? @db.Uuid
+  decidedAt DateTime?
+  @@index([status,packageId,locationId])
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @db.Uuid
+  action String
+  entityType String
+  entityId String
+  payload Json
+  createdAt DateTime @default(now())
+  actor User? @relation("AuditActor",fields:[actorId],references:[id])
+  @@index([entityType,entityId,createdAt])
+}
