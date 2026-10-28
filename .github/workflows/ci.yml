@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://rreklam:rreklam@localhost:5432/rreklam?schema=public
+      AUTH_SECRET: ci-testing-secret-not-for-production-1234567890
+      OTP_PEPPER: ci-testing-pepper-not-for-production-12345678901234567890
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run db:generate
+      - run: npx prisma validate
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run build

@@ -1,0 +1,39 @@
+# Local development only. Change all passwords before any remote deployment.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rreklam
+      POSTGRES_USER: rreklam
+      POSTGRES_PASSWORD: rreklam_local_only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - rreklam-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rreklam -d rreklam"]
+      interval: 5s
+      retries: 15
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: rreklam_dev
+      MINIO_ROOT_PASSWORD: rreklam_storage_local_only
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - rreklam-media:/data
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 rreklam_dev rreklam_storage_local_only; do sleep 2; done;
+      mc mb --ignore-existing local/rreklam-private;
+      "
+volumes:
+  rreklam-postgres:
+  rreklam-media:
