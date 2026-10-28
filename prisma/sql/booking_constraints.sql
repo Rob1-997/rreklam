@@ -6,7 +6,7 @@ ALTER TABLE "VehicleAllocation" ADD CONSTRAINT "vehicle_allocation_period_valid"
 ALTER TABLE "VehicleAllocation" ADD CONSTRAINT "vehicle_no_overlapping_allocations"
   EXCLUDE USING gist (
     "vehicleId" WITH =,
-    tstzrange("startsAt", "endsAt", '[)') WITH &&
+    tsrange("startsAt", "endsAt", '[)') WITH &&
   ) WHERE ("status" IN ('HELD','CONFIRMED','INSTALLING','ACTIVE','REMOVING'));
 ALTER TABLE "CampaignCityTarget" ADD CONSTRAINT "target_quantity_positive" CHECK ("quantity" > 0);
 ALTER TABLE "PackageCityPrice" ADD CONSTRAINT "package_price_positive" CHECK ("priceAmd" > 0);

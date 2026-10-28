@@ -5,6 +5,20 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: rreklam
+          POSTGRES_USER: rreklam
+          POSTGRES_PASSWORD: rreklam
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rreklam -d rreklam"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     env:
       DATABASE_URL: postgresql://rreklam:rreklam@localhost:5432/rreklam?schema=public
       AUTH_SECRET: ci-testing-secret-not-for-production-1234567890
@@ -20,3 +34,9 @@ jobs:
       - run: npm test
       - run: npx tsc --noEmit
       - run: npm run build
+      - name: Create isolated test database schema
+        run: npx prisma db push
+      - name: Install exclusion and check constraints
+        run: npx prisma db execute --file prisma/sql/booking_constraints.sql --schema prisma/schema.prisma
+      - name: Verify PostgreSQL vehicle booking invariants
+        run: npx tsx tests/db-booking.ts
