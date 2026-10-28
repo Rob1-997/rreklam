@@ -498,6 +498,8 @@ model CampaignQuote {
   status QuoteStatus
   preparedById String @db.Uuid
   reviewedById String? @db.Uuid
+  startsAt DateTime
+  endsAt DateTime
   createdAt DateTime @default(now())
   decidedAt DateTime?
   decisionReason String?
