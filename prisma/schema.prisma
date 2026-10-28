@@ -115,6 +115,9 @@ model User {
   roles UserRole[]
   accounts Account[]
   sessions Session[]
+  clientProfile ClientProfile?
+  managedClients ClientProfile[] @relation("ClientManager")
+  clientCampaigns Campaign[] @relation("CampaignClient")
   managedDrivers DriverProfile[] @relation("DriverManager")
   reviewVehicles Vehicle[] @relation("VehicleReviewer")
   driver DriverProfile?
@@ -281,6 +284,7 @@ model Campaign {
   startAt DateTime?
   endAt DateTime?
   createdAt DateTime @default(now())
+  client User @relation("CampaignClient",fields:[clientId],references:[id])
   manager User? @relation("CampaignManager",fields:[managerId],references:[id])
   targets CampaignCityTarget[]
   allocations VehicleAllocation[]
@@ -453,4 +457,15 @@ model PhoneOtp {
   usedAt DateTime?
   attempts Int @default(0)
   @@index([phone,requestedAt])
+}
+
+model ClientProfile {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  managerId String? @db.Uuid
+  activatedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id])
+  manager User? @relation("ClientManager",fields:[managerId],references:[id])
+  @@index([managerId])
 }
