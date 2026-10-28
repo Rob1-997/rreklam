@@ -25,10 +25,6 @@ function dateAtYerevanMidnight(day:string){
   if(date.getTime()>Date.now()+366*86400_000)throw new ApiError(400,"Date is too far ahead");
   return date;
 }
-function conflict(error:unknown):never{
-  if(error instanceof Prisma.PrismaClientKnownRequestError&&(error.code==="P2034"||error.code==="P2002"))throw new ApiError(409,"Concurrent update: refresh and try again");
-  throw error;
-}
 export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){
   try{
     const actor=await requireRole("OWNER","MANAGER");
@@ -37,7 +33,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
       where:{id,...(actor.isOwner?{}:{managerId:actor.id})},
       select:{
         id:true,status:true,quoteVersion:true,quotePriceAmd:true,managerId:true,
-        targets:{select:{id:true,packageId:true,quantity:true,location:{select:{code:true,nameRu:true}},packageId:true}},
+        targets:{select:{id:true,packageId:true,quantity:true,location:{select:{code:true,nameRu:true}}}},
         quotes:{orderBy:{version:"desc"},take:20,select:{
           id:true,version:true,status:true,preparedById:true,reviewedById:true,createdAt:true,decidedAt:true,decisionReason:true,
           startsAt:true,endsAt:true,grossPriceAmd:true,discountAmd:true,priceAmd:true,driverPayoutAmd:true,manualCostAmd:true,
@@ -67,6 +63,8 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
       if(campaign.status!=="REVIEW")throw new ApiError(409,"Only unapproved requests can be quoted");
       if(campaign.quoteVersion!==input.expectedQuoteVersion)throw new ApiError(409,"Quote version changed; refresh");
       if(!campaign.targets.length)throw new ApiError(409,"Campaign is empty");
+      const pending=await tx.campaignQuote.count({where:{campaignId:id,status:"PENDING_OWNER"}});
+      if(pending>0)throw new ApiError(409,"Previous quote is awaiting owner decision");
       const lines=[];
       let durationDays:number|null=null;
       for(const target of campaign.targets){
@@ -107,6 +105,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
     },{isolationLevel:"Serializable"});
     return NextResponse.json({quote},{status:201});
   }catch(error){
-    try{conflict(error)}catch(e){return respondError(e)}
+    if(error instanceof Prisma.PrismaClientKnownRequestError&&(error.code==="P2034"||error.code==="P2002"))return respondError(new ApiError(409,"Concurrent update; refresh"));
+    return respondError(error);
   }
 }
