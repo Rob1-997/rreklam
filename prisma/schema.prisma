@@ -23,11 +23,18 @@ enum AdFormat { REAR_WINDOW DOORS PARTIAL FULL }
 model User {
   id String @id @default(uuid()) @db.Uuid
   phone String? @unique
+  phoneVerifiedAt DateTime?
   email String? @unique
-  name String
+  emailVerified DateTime?
+  image String?
+  name String?
   status UserStatus @default(PENDING)
   createdAt DateTime @default(now())
   roles UserRole[]
+  accounts Account[]
+  sessions Session[]
+  managedDrivers DriverProfile[] @relation("DriverManager")
+  reviewVehicles Vehicle[] @relation("VehicleReviewer")
   driver DriverProfile?
   ownedVehicles Vehicle[] @relation("VehicleOwner")
   managedCampaigns Campaign[] @relation("CampaignManager")
@@ -49,6 +56,11 @@ model DriverProfile {
   userId String @unique @db.Uuid
   driverType String
   approvedAt DateTime?
+  termsAcceptedAt DateTime
+  managerId String? @db.Uuid
+  primaryCityId String @db.Uuid
+  manager User? @relation("DriverManager", fields:[managerId],references:[id])
+  primaryCity Location @relation(fields:[primaryCityId],references:[id])
   user User @relation(fields:[userId],references:[id])
   assignments VehicleDriver[]
   earnings DriverEarning[]
@@ -77,6 +89,7 @@ model Location {
   thresholds StockAlertRule[]
   prices PackageCityPrice[]
   driverRates DriverRate[]
+  drivers DriverProfile[]
 }
 
 model BodyType {
@@ -96,6 +109,8 @@ model Vehicle {
   year Int
   plate String @unique
   ownerConsentAt DateTime?
+  reviewManagerId String? @db.Uuid
+  reviewer User? @relation("VehicleReviewer", fields:[reviewManagerId],references:[id])
   status VehicleStatus @default(PENDING)
   wrapStatus WrapStatus @default(NONE)
   approvedAt DateTime?
@@ -116,7 +131,7 @@ model VehicleMedia {
   privateStorageKey String
   uploadedAt DateTime @default(now())
   vehicle Vehicle @relation(fields:[vehicleId],references:[id],onDelete:Cascade)
-  @@index([vehicleId,kind])
+  @@unique([vehicleId,kind])
 }
 
 model VehicleServiceArea {
@@ -311,4 +326,47 @@ model AuditLog {
   createdAt DateTime @default(now())
   actor User? @relation("AuditActor",fields:[actorId],references:[id])
   @@index([entityType,entityId,createdAt])
+}
+
+model Account {
+  id String @id @default(cuid())
+  userId String @db.Uuid
+  type String
+  provider String
+  providerAccountId String
+  refresh_token String? @db.Text
+  access_token String? @db.Text
+  expires_at Int?
+  token_type String?
+  scope String?
+  id_token String? @db.Text
+  session_state String?
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([provider,providerAccountId])
+}
+
+model Session {
+  id String @id @default(cuid())
+  sessionToken String @unique
+  userId String @db.Uuid
+  expires DateTime
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token String
+  expires DateTime
+  @@unique([identifier,token])
+}
+
+model PhoneOtp {
+  id String @id @default(uuid()) @db.Uuid
+  phone String
+  codeHash String
+  requestedAt DateTime @default(now())
+  expiresAt DateTime
+  usedAt DateTime?
+  attempts Int @default(0)
+  @@index([phone,requestedAt])
 }
