@@ -1,0 +1,30 @@
+@import "tailwindcss";
+:root{--blue:#2559dc;--text:#14253f;--sub:#5e718d}
+*{box-sizing:border-box}
+body{margin:0;background:#f7faff;color:var(--text);font-family:Arial,Helvetica,sans-serif}
+a{text-decoration:none;color:inherit}
+.shell{max-width:1160px;margin:auto;padding:0 24px}
+header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:26px 0}
+.logo{font-size:27px;font-weight:900;letter-spacing:-1px}.logo span{color:var(--blue)}
+nav{display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:14px}
+nav a:hover{color:var(--blue)}
+.cta{display:inline-flex;border:0;border-radius:13px;padding:14px 22px;background:var(--blue);color:white;font-weight:700;cursor:pointer}
+.cta.ghost{background:#e9f0ff;color:var(--blue)}.cta:disabled{opacity:.45}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:46px;align-items:center;padding:70px 0 90px}
+h1{font-size:clamp(40px,6vw,70px);line-height:1.08;letter-spacing:-2px;margin:20px 0}
+h2{font-size:clamp(28px,3vw,38px);letter-spacing:-1px}
+.lead{font-size:19px;color:var(--sub);line-height:1.7}
+.pill{display:inline-block;border-radius:999px;background:#e9f0ff;padding:9px 14px;color:var(--blue);font-size:13px;font-weight:700}
+.illustration{background:linear-gradient(145deg,#cbdcff,#f1f7ff);padding:30px;border-radius:28px;min-height:300px;display:grid;place-items:center}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card,.form{border:1px solid #e1e9f7;background:white;border-radius:22px;padding:27px}
+.card p,.muted{color:var(--sub);line-height:1.6}
+section{padding:48px 0}
+footer{padding:34px 0;border-top:1px solid #e1e9f7;color:var(--sub);font-size:13px;margin-top:60px}
+label{display:block;font-size:14px;font-weight:700;margin:0 0 7px}
+input,select,textarea{width:100%;padding:13px;border:1px solid #cbd8eb;border-radius:10px;background:white;color:var(--text);font:inherit}
+.field{margin:0 0 18px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cityrow{display:grid;grid-template-columns:1fr 105px 44px;gap:10px;align-items:center;margin-bottom:10px}
+.small{font-size:13px;color:var(--sub);line-height:1.6}
+@media(max-width:780px){header{flex-direction:column;align-items:flex-start}nav{gap:10px}.hero,.cols,.cards{grid-template-columns:1fr}.hero{padding:30px 0}.illustration{min-height:210px}}

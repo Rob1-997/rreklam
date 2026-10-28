@@ -1,0 +1,1 @@
+import {notFound} from "next/navigation";import {validLang} from "@/lib/i18n";import RequestForm from "@/components/RequestForm";export default async function Request({params}:{params:Promise<{lang:string}>}){const {lang}=await params;if(!validLang(lang))notFound();return <div className="shell"><section><RequestForm lang={lang}/></section></div>}

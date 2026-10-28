@@ -1,0 +1,1 @@
+import "./globals.css";import type {Metadata} from "next";export const metadata:Metadata={title:"RReklam — Автомобильная реклама в Армении",description:"Реклама на автомобилях в городах Армении."};export default function Layout({children}:{children:React.ReactNode}){return <html lang="hy"><body>{children}</body></html>}
