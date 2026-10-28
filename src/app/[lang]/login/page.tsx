@@ -1,7 +1,9 @@
 import {notFound} from "next/navigation";
 import {validLang} from "@/lib/i18n";
 import LoginForm from "@/components/LoginForm";
-export default async function LoginPage({params}:{params:Promise<{lang:string}>}) {
-  const { lang }=await params; if(!validLang(lang))notFound();
-  return <div className="shell"><section><LoginForm lang={lang}/></section></div>;
+export default async function LoginPage({params,searchParams}:{params:Promise<{lang:string}>,searchParams:Promise<{next?:string}>}) {
+  const {lang}=await params;if(!validLang(lang))notFound();
+  const {next}=await searchParams;
+  const returnTo=typeof next==="string"&&next.startsWith(`/${lang}/`)&&!next.startsWith("//")?next:`/${lang}/driver`;
+  return <div className="shell"><section><LoginForm lang={lang} returnTo={returnTo}/></section></div>;
 }
