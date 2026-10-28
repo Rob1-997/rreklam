@@ -23,8 +23,8 @@ export default function CampaignQuoteBuilder({campaignId,targets,onChanged}:{cam
  const [packages,setPackages]=useState<Package[]>([]);
  const [startDate,setStartDate]=useState("");
  const [discount,setDiscount]=useState(0);
- const [costValues,setCostValues]=useState<Record<FinanceCategory,number>>({
-  PRINT:0,INSTALL:0,REMOVAL:0,LOGISTICS:0,OPERATIONS:0,PAYMENT_FEE:0,RESERVE:0,OTHER:0
+ const [costValues,setCostValues]=useState<Record<FinanceCategory,string>>({
+  PRINT:"",INSTALL:"",REMOVAL:"",LOGISTICS:"",OPERATIONS:"",PAYMENT_FEE:"",RESERVE:"",OTHER:""
  });
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const refresh=useCallback(async()=>{
@@ -51,13 +51,13 @@ export default function CampaignQuoteBuilder({campaignId,targets,onChanged}:{cam
  const margin=net>0?(net-paymentCosts)*100/net:null;
  const needsOwner=discount>0||(margin!==null&&margin<25);
  const pending=campaign?.quotes[0]?.status==="PENDING_OWNER";
- const canCreate=campaign?.status==="REVIEW"&&!pending&&allPriced&&startDate.length===10&&net>0&&!busy&&costInputs.every(c=>Number.isInteger(costValues[c.category])&&costValues[c.category]>=0);
+ const canCreate=campaign?.status==="REVIEW"&&!pending&&allPriced&&startDate.length===10&&net>0&&!busy&&costInputs.every(c=>costValues[c.category]!==""&&Number.isSafeInteger(Number(costValues[c.category]))&&Number(costValues[c.category])>=0);
  async function submit(e:FormEvent){
   e.preventDefault();setBusy(true);setError("");setMessage("");
   try{
    const res=await fetch(`/api/admin/campaigns/${campaignId}/quotes`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     expectedQuoteVersion:campaign?.quoteVersion,startDate,discountAmd:discount,
-    costs:costInputs.map(x=>({category:x.category,amountAmd:costValues[x.category]}))
+    costs:costInputs.map(x=>({category:x.category,amountAmd:Number(costValues[x.category])}))
    })});
    if(!res.ok)throw Error(await fetchError(res));
    const saved=(await res.json()).quote;
@@ -84,7 +84,7 @@ export default function CampaignQuoteBuilder({campaignId,targets,onChanged}:{cam
    </div>
    <h3>Прямые расходы по кампании · ручной ввод</h3>
    <p className="small">Каждую категорию необходимо проверить; ноль означает подтверждённое отсутствие затрат. Выплаты водителям рассчитываются из утверждённых ставок автоматически.</p>
-   <div className="cols">{costInputs.map(x=><div className="field" key={x.category}><label>{x.label} (AMD)</label><input type="number" min={0} max={2147483647} required value={costValues[x.category]} onChange={e=>setCostValues(old=>({...old,[x.category]:Number(e.target.value)}))}/></div>)}</div>
+   <div className="cols">{costInputs.map(x=><div className="field" key={x.category}><label>{x.label} (AMD)</label><input type="number" min={0} max={2147483647} required value={costValues[x.category]} placeholder="0 — если затрат нет" onChange={e=>setCostValues(old=>({...old,[x.category]:e.target.value}))}/></div>)}</div>
    <div className="card" style={{marginBottom:18}}><h3>Предварительная экономика</h3>
     <p>Тарифы: <b>{formatAMD(gross)}</b> · Скидка: {formatAMD(discount)}</p>
     <p>Водителям: {formatAMD(payouts)} · Остальные расходы: {formatAMD(manual)}</p>
