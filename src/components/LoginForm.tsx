@@ -11,7 +11,7 @@ export default function LoginForm({ lang, returnTo, showLocalDemo }: { lang: Lan
     if(busy||!localPassword)return;
     setBusy(true);setLocalStatus("Проверяем локальный вход…");
     try{
-      const result=await signIn("local-owner",{password:localPassword,redirect:false,callbackUrl:`/${lang}/admin`});
+      const result=await signIn("local-owner",{password:localPassword,redirect:false,redirectTo:`/${lang}/admin`});
       if(!result?.ok || result.error){
         setLocalStatus(result?.error==="CredentialsSignin"
           ?"Вход отклонён. Проверь пароль и создание тестового владельца (команда ниже)."

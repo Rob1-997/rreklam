@@ -18,7 +18,7 @@ async function run(){
   const callback=await fetch(base+"/api/auth/callback/local-owner",{
     method:"POST",
     headers:{"Content-Type":"application/x-www-form-urlencoded","X-Auth-Return-Redirect":"1","Cookie":initialCookies.join("; ")},
-    body:new URLSearchParams({csrfToken:csrf.csrfToken,password,callbackUrl:base+"/ru/admin"}),
+    body:new URLSearchParams({csrfToken:csrf.csrfToken,password,redirectTo:base+"/ru/admin"}),
     redirect:"manual"
   });
   const payload=await callback.text();
@@ -26,7 +26,7 @@ async function run(){
   assert.equal(callback.status,200,"Auth.js callback must accept correct local password: "+callback.status+" "+payload.slice(0,300));
   const response=JSON.parse(payload);
   assert.equal(typeof response.url,"string");
-  assert.equal(response.url.endsWith("/ru/admin"),true,"Must redirect to admin, not driver: "+response.url);
+  assert.equal(response.url.endsWith("/ru/admin"),true,"Auth.js redirectTo must resolve to /ru/admin: "+response.url);
   assert.equal(callbackCookies.some(x=>x.includes("session-token=")),true,"Auth.js must issue session cookie");
   const session=await fetch(base+"/api/auth/session",{headers:{"Cookie":[...initialCookies,...callbackCookies].join("; ")}});
   assert.equal(session.status,200);
