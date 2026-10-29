@@ -42,3 +42,22 @@ jobs:
         run: npx tsx tests/db-booking.ts
       - name: Verify financial quote snapshots and constraints
         run: npx tsx tests/db-quotes.ts
+      - name: Bootstrap local demo owner in isolated CI database
+        env:
+          RREKLAM_LOCAL_DEMO: "true"
+          RREKLAM_LOCAL_DEMO_PASSWORD: "ci-only-long-dev-password-1234567890"
+        run: npx tsx scripts/bootstrap-local-owner.ts
+      - name: Test local login and admin page over HTTP
+        env:
+          RREKLAM_LOCAL_DEMO: "true"
+          RREKLAM_LOCAL_DEMO_PASSWORD: "ci-only-long-dev-password-1234567890"
+        run: |
+          npm run dev > /tmp/rreklam-next.log 2>&1 &
+          NEXT_PID=$!
+          trap 'kill $NEXT_PID 2>/dev/null || true; tail -n 120 /tmp/rreklam-next.log' EXIT
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/api/auth/csrf >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          node tests/local-login-e2e.mjs
+
