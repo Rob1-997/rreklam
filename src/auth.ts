@@ -15,13 +15,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: "local-owner", name: "Local owner (development only)",
       credentials: { password: { label: "Local demo password", type: "password" } },
       async authorize(credentials, request) {
-        if (!isLocalDemoEnabled() || !isLocalAuthRequest(request)) return null;
-        if (!demoPasswordMatches(credentials?.password, process.env.RREKLAM_LOCAL_DEMO_PASSWORD)) return null;
+        // Development-only hints: explain denial in the local server console;
+        // never log passwords, OTPs, emails, tokens, or database connection strings.
+        if (!isLocalDemoEnabled()) {
+          if (process.env.NODE_ENV==="development") console.warn("[RReklam local login] DENIED: local demo disabled or .env/password configuration invalid.");
+          return null;
+        }
+        if (!isLocalAuthRequest(request)) {
+          console.warn("[RReklam local login] DENIED: request is not coming through localhost or 127.0.0.1.");
+          return null;
+        }
+        if (!demoPasswordMatches(credentials?.password, process.env.RREKLAM_LOCAL_DEMO_PASSWORD)) {
+          console.warn("[RReklam local login] DENIED: submitted password does not match RREKLAM_LOCAL_DEMO_PASSWORD in .env.");
+          return null;
+        }
         const user=await prisma.user.findUnique({
           where:{email:LOCAL_DEMO_EMAIL},
           include:{roles:{where:{role:"OWNER",activatedAt:{not:null}},select:{role:true}}}
         });
-        if(!user || user.status!=="ACTIVE" || !user.phoneVerifiedAt || !user.roles.length) return null;
+        if (!user) {
+          console.warn("[RReklam local login] DENIED: local owner has not been created; run bootstrap-local-owner.ts.");
+          return null;
+        }
+        if (user.status!=="ACTIVE" || !user.phoneVerifiedAt || !user.roles.length) {
+          console.warn("[RReklam local login] DENIED: owner exists but account, phone verification, or OWNER role is not active.");
+          return null;
+        }
         return user;
       }
     }),
