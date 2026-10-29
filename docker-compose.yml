@@ -16,6 +16,8 @@ services:
       interval: 5s
       retries: 15
   minio:
+    # Optional: not needed for owner panel. Enable with --profile media after registry access is resolved.
+    profiles: ["media"]
     image: quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z
     command: server /data --console-address ":9001"
     environment:
@@ -27,6 +29,7 @@ services:
     volumes:
       - rreklam-media:/data
   minio-init:
+    profiles: ["media"]
     image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       - minio
