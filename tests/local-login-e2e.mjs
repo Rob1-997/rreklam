@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-const base="http://127.0.0.1:3000";
+const base="http://localhost:3000";
 const password=process.env.RREKLAM_LOCAL_DEMO_PASSWORD;
 if(!password)throw Error("Test password not configured");
 function cookies(response){
@@ -18,7 +18,7 @@ async function run(){
   const callback=await fetch(base+"/api/auth/callback/local-owner",{
     method:"POST",
     headers:{"Content-Type":"application/x-www-form-urlencoded","X-Auth-Return-Redirect":"1","Cookie":initialCookies.join("; ")},
-    body:new URLSearchParams({csrfToken:csrf.csrfToken,password,redirectTo:base+"/ru/admin"}),
+    body:new URLSearchParams({csrfToken:csrf.csrfToken,password,callbackUrl:base+"/ru/admin"}),
     redirect:"manual"
   });
   const payload=await callback.text();
